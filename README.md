@@ -1,25 +1,25 @@
 <h1 align="center">UCall</h1>
 <h3 align="center">
-JSON Remote Procedure Calls Library<br/>
+REST API Web Server<br/>
 Up to 100x Faster than FastAPI<br/>
 </h3>
 <br/>
 
 <p align="center">
-<a href="https://discord.gg/xuDmpbEDnQ"><img height="25" src="https://github.com/unum-cloud/ukv/raw/main/assets/icons/discord.svg" alt="Discord"></a>
+<a href="https://discord.gg/xuDmpbEDnQ"><img height="25" src="https://github.com/unum-cloud/.github/raw/main/assets/discord.svg" alt="Discord"></a>
 &nbsp;&nbsp;&nbsp;
-<a href="https://www.linkedin.com/company/unum-cloud/"><img height="25" src="https://github.com/unum-cloud/ukv/raw/main/assets/icons/linkedin.svg" alt="LinkedIn"></a>
+<a href="https://www.linkedin.com/company/unum-cloud/"><img height="25" src="https://github.com/unum-cloud/.github/raw/main/assets/linkedin.svg" alt="LinkedIn"></a>
 &nbsp;&nbsp;&nbsp;
-<a href="https://twitter.com/unum_cloud"><img height="25" src="https://github.com/unum-cloud/ukv/raw/main/assets/icons/twitter.svg" alt="Twitter"></a>
+<a href="https://twitter.com/unum_cloud"><img height="25" src="https://github.com/unum-cloud/.github/raw/main/assets/twitter.svg" alt="Twitter"></a>
 &nbsp;&nbsp;&nbsp;
-<a href="https://unum.cloud/post"><img height="25" src="https://github.com/unum-cloud/ukv/raw/main/assets/icons/blog.svg" alt="Blog"></a>
+<a href="https://unum.cloud/post"><img height="25" src="https://github.com/unum-cloud/.github/raw/main/assets/blog.svg" alt="Blog"></a>
 &nbsp;&nbsp;&nbsp;
-<a href="https://github.com/unum-cloud/ucall"><img height="25" src="https://github.com/unum-cloud/ukv/raw/main/assets/icons/github.svg" alt="GitHub"></a>
+<a href="https://github.com/unum-cloud/usearch"><img height="25" src="https://github.com/unum-cloud/.github/raw/main/assets/github.svg" alt="GitHub"></a>
 </p>
 
 ---
 
-Most modern networking is built either on slow and ambiguous REST APIs or unnecessarily complex gRPC.
+Most modern networking is built either on a deep and slow many-layer REST-over-TCP/IP stack or unnecessarily complex gRPC.
 FastAPI, for example, looks very approachable.
 We aim to be equally or even simpler to use.
 
@@ -63,8 +63,7 @@ uvicorn.run(...)
 <td>
 
 ```python
-from ucall.posix import Server
-# from ucall.uring import Server on 5.19+
+from ucall import Server
 
 server = Server()
 
@@ -117,7 +116,7 @@ How can a tiny pet-project with just a couple thousand lines of code compete wit
 __UCall stands on the shoulders of Giants__:
 
 - UCall uses `io_uring` for interrupt-less IO. It mainly relies on `io_uring_prep_read_fixed` (5.1+), `io_uring_prep_accept_direct` (5.19+), `io_uring_register_files_sparse` (5.19+), `IORING_SETUP_COOP_TASKRUN` optional (5.19+), `IORING_SETUP_SINGLE_ISSUER` optional (6.0+).
-- SIMD-accelerated parsers with manual memory control. [`simdjson`][simdjson] to parse JSON faster than gRPC can unpack `ProtoBuf`. [`turbo-base64`][base64] to decode binary values from a `Base64` form. [`stringzilla`][stringzilla] to navigate HTTP headers.
+- SIMD-accelerated parsers with manual memory control. [`simdjson`][simdjson] to parse JSON faster than gRPC can unpack `ProtoBuf`. [`simdutf`][base64] to decode binary values from a `Base64` form. [`stringzilla`][stringzilla] to navigate HTTP headers. [`ada`][ada] to parse URI endpoints.
 
 You have already seen the latency of the round trip..., the throughput in requests per second..., want to see the bandwidth?
 Try yourself!
@@ -134,7 +133,7 @@ FastAPI supports native type, while UCall supports `numpy.ndarray`, `PIL.Image` 
 This comes handy when you build real applications or want to deploy Multi-Modal AI, like we do with [UForm](https://github.com/unum-cloud/uform).
 
 ```python
-from ucall.rich_posix import Server
+from ucall import Server
 import ufrom
 
 server = Server()
@@ -152,7 +151,7 @@ def vectorize(description: str, photo: PIL.Image.Image) -> numpy.ndarray:
 We also have our own optional `Client` class that helps with those custom types.
 
 ```python
-from ucall.client import Client
+from ucall import Client
 
 client = Client()
 # Explicit JSON-RPC call:
@@ -235,7 +234,7 @@ This library is so fast, that it doesn't need more than 1 core, so you can run a
 | UCall with io_uring     |   ✅   |   C    |   32    |          - |  88'455 rps |
 
 In this case, every server was bombarded by requests from 1 or a fleet of 32 other instances in the same availability zone.
-If you want to reproduce those benchmarks, check out the [`sum` examples on GitHub][sum-examples].
+If you want to reproduce those benchmarks, check out the [examples on GitHub][examples].
 
 ## Quick Start
 
@@ -318,7 +317,7 @@ Possible long-term goals:
 ## What is JSON-RPC and How It Compares to REST and gRPC?
 
 [simdjson]: https://github.com/simdjson/simdjson
-[base64]: https://github.com/powturbo/Turbo-Base64
+[base64]: https://github.com/simdutf/simdutf
 [stringzilla]: https://github.com/ashvardanian/stringzilla
-[sum-examples]: https://github.com/unum-cloud/ucall/tree/dev/examples/sum
-[ukv]: https://github.com/unum-cloud/ukv
+[ada]: https://github.com/ada-url/ada
+[examples]: https://github.com/unum-cloud/ucall/tree/dev/examples

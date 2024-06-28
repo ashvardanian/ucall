@@ -4,7 +4,7 @@ project(
   VERSION 0.5.5
   LANGUAGES C CXX
   DESCRIPTION
-    "Up to 100x Faster FastAPI. JSON-RPC with io_uring, SIMD-acceleration, and pure CPython bindings"
+  "Up to 100x Faster FastAPI. JSON-RPC with io_uring, SIMD-acceleration, and pure CPython bindings"
   HOMEPAGE_URL "https://github.com/unum-cloud/ucall")
 
 set(CMAKE_C_STANDARD 99)
@@ -38,30 +38,30 @@ endif()
 # Set the default values for options based on whether io_uring is supported
 option(UCALL_BUILD_LIB_POSIX "Builds the C library for the `posix` backend" ON)
 option(UCALL_BUILD_PYTHON_POSIX
-       "Builds CPython bindings for the `posix` backend" ON)
+  "Builds CPython bindings for the `posix` backend" ON)
 
 # Options depending on SUPPORTS_IO_URING
 option(UCALL_BUILD_LIB_URING "Builds the C library for the `uring` backend"
-       ${SUPPORTS_IO_URING})
+  ${SUPPORTS_IO_URING})
 option(UCALL_BUILD_PYTHON_URING
-       "Builds CPython bindings for the `uring` backend" ${SUPPORTS_IO_URING})
+  "Builds CPython bindings for the `uring` backend" ${SUPPORTS_IO_URING})
 
 option(UCALL_BUILD_BENCHMARKS
-       "Builds all available backend for the summation server to run benchmarks"
-       OFF)
+  "Builds all available backend for the summation server to run benchmarks"
+  OFF)
 option(UCALL_BUILD_EXAMPLES
-       "Builds examples for Redis-like server and PyTorch deployment" OFF)
+  "Builds examples for Redis-like server and PyTorch deployment" OFF)
 option(UCALL_BUILD_TESTS "Builds unit tests for the C library" OFF)
 option(UCALL_BUILD_ALL "Builds all supported target" OFF)
 
 # Enforce options based on SUPPORTS_IO_URING after its value is known
 if(SUPPORTS_IO_URING)
   set(UCALL_BUILD_LIB_URING
-      ON
-      CACHE BOOL "Force enable UCALL_BUILD_LIB_URING" FORCE)
+    ON
+    CACHE BOOL "Force enable UCALL_BUILD_LIB_URING" FORCE)
   set(UCALL_BUILD_PYTHON_URING
-      ON
-      CACHE BOOL "Force enable UCALL_BUILD_PYTHON_URING" FORCE)
+    ON
+    CACHE BOOL "Force enable UCALL_BUILD_PYTHON_URING" FORCE)
 endif()
 
 if(UCALL_BUILD_PYTHON_URING)
@@ -89,11 +89,11 @@ endif()
 
 set(CMAKE_CACHEFILE_DIR "${CMAKE_SOURCE_DIR}/build")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
-    "${CMAKE_BINARY_DIR}/build/lib"
-    CACHE PATH "Path to static libs")
+  "${CMAKE_BINARY_DIR}/build/lib"
+  CACHE PATH "Path to static libs")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
-    "${CMAKE_BINARY_DIR}/build/lib"
-    CACHE PATH "Path to shared libs")
+  "${CMAKE_BINARY_DIR}/build/lib"
+  CACHE PATH "Path to shared libs")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/build/bin")
 
 message(STATUS "Library output directory: ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
@@ -106,7 +106,7 @@ if(MSVC)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DEBUG")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
-      "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /O2 /DEBUG")
+    "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /O2 /DEBUG")
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic")
@@ -128,13 +128,13 @@ endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set(CMAKE_OSX_DEPLOYMENT_TARGET "11")
   set(CMAKE_OSX_SYSROOT
-      CACHE STRING "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk")
+    CACHE STRING "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk")
   set(CMAKE_OSX_DEPLOYMENT_TARGET
-      "11"
-      CACHE STRING "Minimum OS X deployment version")
+    "11"
+    CACHE STRING "Minimum OS X deployment version")
   set(CMAKE_OSX_ARCHITECTURES
-      "x86_64" "universal2" "arm64"
-      CACHE STRING "Minimum OS X deployment version")
+    "x86_64" "universal2" "arm64"
+    CACHE STRING "Minimum OS X deployment version")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -std=c++17")
 endif()
 
@@ -145,7 +145,15 @@ find_package(Threads REQUIRED)
 FetchContent_Declare(
   simdjson
   GIT_REPOSITORY https://github.com/simdjson/simdjson.git
-  GIT_TAG v3.1.6
+  GIT_TAG v3.9.4
+  GIT_SHALLOW 1)
+FetchContent_MakeAvailable(simdjson)
+include_directories(${simdjson_SOURCE_DIR}/include)
+
+FetchContent_Declare(
+  ada
+  GIT_REPOSITORY https://github.com/ada-url/ada
+  GIT_TAG v2.8.0
   GIT_SHALLOW 1)
 FetchContent_MakeAvailable(simdjson)
 include_directories(${simdjson_SOURCE_DIR}/include)
@@ -155,7 +163,7 @@ include_directories(${simdjson_SOURCE_DIR}/include)
 FetchContent_Declare(
   cxxopts
   GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
-  GIT_TAG v3.1.1
+  GIT_TAG v3.2.0
   GIT_SHALLOW 1)
 FetchContent_MakeAvailable(cxxopts)
 include_directories(${cxxopts_SOURCE_DIR}/include)
@@ -163,20 +171,22 @@ include_directories(${cxxopts_SOURCE_DIR}/include)
 # Parsing HTTP headers On MacOS you may need to locate headers here: export
 # CPATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/
 FetchContent_Declare(
-  picohttpparser
-  # GIT_REPOSITORY https://github.com/unum-cloud/picohttpparser.git
-  GIT_REPOSITORY https://github.com/MarkReedZ/picohttpparser.git
+  stringzilla
+  GIT_REPOSITORY https://github.com/ashvardanian/stringzilla.git
+  GIT_TAG v3.8.4
   GIT_SHALLOW 1)
-FetchContent_MakeAvailable(picohttpparser)
-include_directories(${picohttpparser_SOURCE_DIR})
+FetchContent_MakeAvailable(stringzilla)
+include_directories(${stringzilla_SOURCE_DIR})
 
 # Base64 decoding
 FetchContent_Declare(
-  tb64
-  GIT_REPOSITORY https://github.com/unum-cloud/Turbo-Base64.git
+  simdutf
+  GIT_REPOSITORY https://github.com/simdutf/simdutf
+  GIT_TAG v5.2.8
   GIT_SHALLOW 1)
-FetchContent_MakeAvailable(tb64)
-include_directories(${tb64_SOURCE_DIR})
+FetchContent_MakeAvailable(simdutf)
+include_directories(${simdutf_SOURCE_DIR}/include)
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # LibUring
@@ -190,15 +200,15 @@ if(UCALL_BUILD_LIB_URING)
     PREFIX ${CMAKE_BINARY_DIR}/_deps/
     SOURCE_DIR ${URING_DIR}
     CONFIGURE_COMMAND
-      echo Configuring LibUring && cd ${URING_DIR} && ./configure --nolibc
-      --cc=${CMAKE_C_COMPILER} --cxx=${CMAKE_CXX_COMPILER};
+    echo Configuring LibUring && cd ${URING_DIR} && ./configure --nolibc
+    --cc=${CMAKE_C_COMPILER} --cxx=${CMAKE_CXX_COMPILER};
     BUILD_COMMAND cd ${URING_DIR} && make;
     INSTALL_COMMAND ""
     UPDATE_COMMAND "")
   add_library(uring_internal STATIC IMPORTED GLOBAL)
   add_dependencies(uring_internal liburing-ep)
   set_property(TARGET uring_internal PROPERTY IMPORTED_LOCATION
-                                              ${URING_DIR}/src/liburing.a)
+    ${URING_DIR}/src/liburing.a)
 
   include_directories(${URING_DIR}/src/include/)
   set(URING_LIBS uring_internal)
@@ -236,15 +246,15 @@ include_directories(include/ src/)
 
 if(UCALL_BUILD_LIB_POSIX)
   add_library(ucall_server_posix src/engine_posix.cpp)
-  target_link_libraries(ucall_server_posix simdjson::simdjson Threads::Threads)
+  target_link_libraries(ucall_server_posix simdjson::simdjson simdutf::simdutf Threads::Threads)
   set(PYTHON_BACKEND ucall_server_posix)
 endif()
 
 if(UCALL_BUILD_LIB_URING)
   add_library(ucall_server_uring src/engine_uring.cpp)
   set(PYTHON_BACKEND ucall_server_uring)
-  target_link_libraries(ucall_server_uring simdjson::simdjson Threads::Threads
-                        ${URING_LIBS})
+  target_link_libraries(ucall_server_uring simdjson::simdjson simdutf::simdutf Threads::Threads
+    ${URING_LIBS})
 endif()
 
 # Python bindings
@@ -258,10 +268,10 @@ if(UCALL_BUILD_PYTHON_POSIX)
 
   # set_target_properties(py_ucall_posix PROPERTIES OUTPUT_NAME posix)
   target_compile_definitions(py_ucall_posix
-                             PRIVATE UCALL_PYTHON_MODULE_NAME=posix)
+    PRIVATE UCALL_PYTHON_MODULE_NAME=posix)
   message(
     STATUS
-      "Building ucall_server_posix with output in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
+    "Building ucall_server_posix with output in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
   )
 endif()
 
@@ -272,25 +282,25 @@ if(UCALL_BUILD_PYTHON_URING)
 
   # set_target_properties(py_ucall_uring PROPERTIES OUTPUT_NAME uring)
   target_compile_definitions(py_ucall_uring
-                             PRIVATE UCALL_PYTHON_MODULE_NAME=uring)
+    PRIVATE UCALL_PYTHON_MODULE_NAME=uring)
   message(
     STATUS
-      "Building py_ucall_uring with output in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
+    "Building py_ucall_uring with output in ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
   )
 endif()
 
 if(UCALL_BUILD_EXAMPLES)
   add_executable(ucall_example_server_posix examples/ucall_server.cpp)
   target_link_libraries(ucall_example_server_posix ucall_server_posix cxxopts
-                        fmt::fmt)
+    fmt::fmt)
   target_compile_options(ucall_example_server_posix
-                         PUBLIC -DCXXOPTS_NO_EXCEPTIONS=ON)
+    PUBLIC -DCXXOPTS_NO_EXCEPTIONS=ON)
 endif()
 
 if(UCALL_BUILD_EXAMPLES AND UCALL_BUILD_LIB_URING)
   add_executable(ucall_example_server_uring examples/ucall_server.cpp)
   target_link_libraries(ucall_example_server_uring ucall_server_uring cxxopts
-                        fmt::fmt)
+    fmt::fmt)
   target_compile_options(ucall_example_server_uring
-                         PUBLIC -DCXXOPTS_NO_EXCEPTIONS=ON)
+    PUBLIC -DCXXOPTS_NO_EXCEPTIONS=ON)
 endif()
