@@ -1,7 +1,5 @@
 #pragma once
-
-#include "reply.hpp"  // `iovecs_length`
-#include "shared.hpp" // `array_gt`
+#include "datastructures.hpp" // `array_gt`, `span_gt`
 
 namespace unum::ucall {
 
@@ -123,6 +121,22 @@ class exchange_pipes_t {
 
 #pragma endregion
 };
+
+template <std::size_t iovecs_len_ak> std::size_t iovecs_length(struct iovec const* iovecs) noexcept {
+    std::size_t added_length = 0;
+#pragma unroll full
+    for (std::size_t i = 0; i != iovecs_len_ak; ++i)
+        added_length += iovecs[i].iov_len;
+    return added_length;
+}
+
+template <std::size_t iovecs_len_ak> void iovecs_memcpy(struct iovec const* iovecs, char* output) noexcept {
+#pragma unroll full
+    for (std::size_t i = 0; i != iovecs_len_ak; ++i) {
+        std::memcpy(output, iovecs[i].iov_base, iovecs[i].iov_len);
+        output += iovecs[i].iov_len;
+    }
+}
 
 template <std::size_t iovecs_count_ak> //
 bool exchange_pipes_t::append_outputs(struct iovec const* iovecs) noexcept {

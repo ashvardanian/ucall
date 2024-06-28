@@ -1,59 +1,23 @@
 #pragma once
-
-#if defined(__linux__) // iovec required only for uring
-#define UCALL_IS_LINUX
-#include <sys/uio.h> // `struct iovec`
-#endif
-
-#include <numeric>     // `std::iota`
-#include <string_view> // `std::string_view`
-
-#if defined(__x86_64__)
-#ifdef _MSC_VER
-#include <intrin.h>
-#else
-#include <x86intrin.h>
-#endif
-#endif
-
-#include "ucall/ucall.h" // `ucall_callback_t`
+#include <cstring>     // `std::memcpy`
+#include <memory>      // `std::malloc`
+#include <type_traits> // `std::is_nothrow_default_constructible`
 
 namespace unum::ucall {
 
-/// @brief To avoid dynamic memory allocations on tiny requests,
-/// for every connection we keep a tiny embedded buffer of this capacity.
-static constexpr std::size_t ram_page_size_k = 4096;
-/// @brief  Expected max length of http headers
-static constexpr std::size_t http_head_max_size_k = 1024;
-/// @brief The maximum length of JSON-Pointer, we will use
-/// to lookup parameters in heavily nested requests.
-/// A performance-oriented API will have maximum depth of 1 token.
-/// Some may go as far as 5 token, or roughly 50 character.
-static constexpr std::size_t json_pointer_capacity_k = 256;
-/// @brief Number of bytes in a printed integer.
-/// Used either for error codes, or for request IDs.
-static constexpr std::size_t max_integer_length_k = 32;
-/// @brief Needed for largest-register-aligned memory addressing.
-static constexpr std::size_t align_k = 64;
-/// @brief Accessing real time from user-space is very expensive.
-/// To approximate we can use CPU cycle counters.
-constexpr std::size_t cpu_cycles_per_micro_second_k = 3'000;
-
-enum descriptor_t : int {};
-static constexpr descriptor_t bad_descriptor_k{-1};
-
-struct named_callback_t {
-    ucall_str_t name{};
-    ucall_callback_t callback{};
-    ucall_callback_tag_t callback_tag{};
-};
-
+/**
+ *  @brief  A lightweight non-owning span template for contiguous sequences.
+ *          It supports basic access and iteration operations.
+ *
+ *  @tparam element_at Type of the elements in the span.
+ */
 template <typename element_at> class span_gt {
     element_at* begin_{};
     element_at* end_{};
 
   public:
     span_gt(element_at* b, element_at* e) noexcept : begin_(b), end_(e) {}
+
     span_gt(span_gt&&) = delete;
     span_gt(span_gt const&) = delete;
     span_gt& operator=(span_gt const&) = delete;
@@ -68,6 +32,10 @@ template <typename element_at> class span_gt {
     operator std::basic_string_view<element_at>() const noexcept { return {data(), size()}; }
 };
 
+/**
+ *  @brief  A buffer class that reallocates on every resize.
+ *  @tparam element_at Type of the elements in the buffer.
+ */
 template <typename element_at> class buffer_gt {
     element_at* elements_{};
     std::size_t capacity_{};
@@ -75,6 +43,7 @@ template <typename element_at> class buffer_gt {
 
   public:
     buffer_gt() noexcept = default;
+
     buffer_gt(buffer_gt&&) = delete;
     buffer_gt(buffer_gt const&) = delete;
     buffer_gt& operator=(buffer_gt const&) = delete;
@@ -84,6 +53,7 @@ template <typename element_at> class buffer_gt {
         std::swap(capacity_, other.capacity_);
         return *this;
     }
+
     [[nodiscard]] bool resize(std::size_t n) noexcept {
         elements_ = (element_at*)std::malloc(sizeof(element_at) * n);
         if (!elements_)
@@ -92,12 +62,14 @@ template <typename element_at> class buffer_gt {
         std::uninitialized_default_construct(elements_, elements_ + capacity_);
         return true;
     }
+
     ~buffer_gt() noexcept {
         if constexpr (!std::is_trivially_destructible<element_at>())
             std::destroy_n(elements_, capacity_);
         std::free(elements_);
         elements_ = nullptr;
     }
+
     [[nodiscard]] element_at const* data() const noexcept { return elements_; }
     [[nodiscard]] element_at* data() noexcept { return elements_; }
     [[nodiscard]] element_at* begin() noexcept { return elements_; }
@@ -108,6 +80,10 @@ template <typename element_at> class buffer_gt {
     [[nodiscard]] element_at const& operator[](std::size_t i) const noexcept { return elements_[i]; }
 };
 
+/**
+ *  @brief  A dynamic array class template for managing a resizable array of elements.
+ *  @tparam element_at Type of the elements in the array.
+ */
 template <typename element_at> class array_gt {
     element_at* elements_{};
     std::size_t count_{};
@@ -117,6 +93,7 @@ template <typename element_at> class array_gt {
 
   public:
     array_gt() = default;
+
     array_gt(array_gt&&) = delete;
     array_gt(array_gt const&) = delete;
     array_gt& operator=(array_gt const&) = delete;
@@ -127,6 +104,13 @@ template <typename element_at> class array_gt {
         std::swap(capacity_, other.capacity_);
         return *this;
     }
+
+    /**
+     *  @brief  Reserves capacity for the specified number of elements,
+     *          re-allocating the previous memory region, if needed.
+     *  @param  n New capacity of the array.
+     *  @return True if reservation is successful, otherwise false.
+     */
     [[nodiscard]] bool reserve(std::size_t n) noexcept {
         if (n <= capacity_)
             return true;
@@ -145,7 +129,12 @@ template <typename element_at> class array_gt {
         capacity_ = n;
         return true;
     }
+
     ~array_gt() noexcept { reset(); }
+
+    /**
+     *  @brief  Resets the array, destroying all elements and freeing memory.
+     */
     void reset() noexcept {
         if constexpr (!std::is_trivially_destructible<element_at>())
             std::destroy_n(elements_, count_);
@@ -153,6 +142,7 @@ template <typename element_at> class array_gt {
         elements_ = nullptr;
         capacity_ = count_ = 0;
     }
+
     [[nodiscard]] element_at const* data() const noexcept { return elements_; }
     [[nodiscard]] element_at* data() noexcept { return elements_; }
     [[nodiscard]] element_at* begin() noexcept { return elements_; }
@@ -161,8 +151,24 @@ template <typename element_at> class array_gt {
     [[nodiscard]] std::size_t capacity() const noexcept { return capacity_; }
     [[nodiscard]] element_at& operator[](std::size_t i) noexcept { return elements_[i]; }
 
+    /**
+     *  @brief  Adds an element to the end of the array, assuming enough memory is available.
+     *  @param  element The element to add.
+     */
     void push_back_reserved(element_at element) noexcept { new (elements_ + count_++) element_at(std::move(element)); }
+
+    /**
+     *  @brief  Removes one or more elements from the end of the array.
+     *  @param  n Number of elements to remove.
+     */
     void pop_back(std::size_t n = 1) noexcept { count_ -= n; }
+
+    /**
+     *  @brief  Appends multiple elements to the end of the array.
+     *  @param  elements Pointer to the elements to append.
+     *  @param  n Number of elements to append.
+     *  @return True if append is successful, otherwise false.
+     */
     [[nodiscard]] bool append_n(element_at const* elements, std::size_t n) noexcept {
         if (!reserve(size() + n))
             return false;
@@ -172,6 +178,10 @@ template <typename element_at> class array_gt {
     }
 };
 
+/**
+ *  @brief  A "pool" allocator-like class to store reusable objects.
+ *  @tparam element_at Type of the elements in the pool.
+ */
 template <typename element_at> class pool_gt {
     std::size_t capacity_{};
     std::size_t free_count_{};
@@ -181,6 +191,7 @@ template <typename element_at> class pool_gt {
 
   public:
     pool_gt() = default;
+
     pool_gt(pool_gt&&) = delete;
     pool_gt(pool_gt const&) = delete;
     pool_gt& operator=(pool_gt const&) = delete;
@@ -193,6 +204,11 @@ template <typename element_at> class pool_gt {
         return *this;
     }
 
+    /**
+     *  @brief  Reserves capacity for the specified number of elements.
+     *  @param  n New capacity of the pool.
+     *  @return True if reservation is successful, otherwise false.
+     */
     [[nodiscard]] bool reserve(std::size_t n) noexcept {
         auto mem = std::malloc((sizeof(element_at) + sizeof(std::size_t)) * n);
         if (!mem)
@@ -211,35 +227,132 @@ template <typename element_at> class pool_gt {
         std::free(elements_);
         elements_ = nullptr;
     }
+
+    /**
+     *  @brief  Allocates an element from the pool.
+     *  @return Pointer to the allocated element, or nullptr if the pool is empty.
+     */
     [[nodiscard]] element_at* alloc() noexcept {
         return free_count_ ? elements_ + free_offsets_[--free_count_] : nullptr;
     }
+
+    /**
+     *  @brief  Releases an element back to the pool.
+     *  @param  released Pointer to the element to be released.
+     */
     void release(element_at* released) noexcept { free_offsets_[free_count_++] = released - elements_; }
+
+    /**
+     *  @brief  Gets the offset of the given element in the pool.
+     *  @param  element Reference to the element.
+     *  @return Offset of the element in the pool.
+     */
     [[nodiscard]] std::size_t offset_of(element_at& element) const noexcept { return &element - elements_; }
+
+    /**
+     *  @brief  Gets the element at the specified offset in the pool.
+     *  @param  i Offset of the element.
+     *  @return Reference to the element at the specified offset.
+     */
     [[nodiscard]] element_at& at_offset(std::size_t i) const noexcept { return elements_[i]; }
 };
 
-using timestamp_t = std::uint64_t;
+/**
+ *  @brief  Round-Robin construct for reusable connection states.
+ *  @tparam element_at Type of the elements in the round-robin buffer.
+ */
+template <typename element_at> class round_robin_gt {
+    element_at* circle_{};
+    std::size_t count_{};
+    std::size_t capacity_{};
+    std::size_t idx_newest_{};
+    std::size_t idx_oldest_{};
+    std::size_t idx_to_poll_{};
 
-inline timestamp_t cpu_cycle() noexcept {
-    timestamp_t result;
-#ifdef __aarch64__
-    /*
-     * According to ARM DDI 0487F.c, from Armv8.0 to Armv8.5 inclusive, the
-     * system counter is at least 56 bits wide; from Armv8.6, the counter
-     * must be 64 bits wide.  So the system counter could be less than 64
-     * bits wide and it is attributed with the flag 'cap_user_time_short'
-     * is true.
+  public:
+    inline round_robin_gt& operator=(round_robin_gt&& other) noexcept {
+        std::swap(circle_, other.circle_);
+        std::swap(count_, other.count_);
+        std::swap(capacity_, other.capacity_);
+        std::swap(idx_newest_, other.idx_newest_);
+        std::swap(idx_oldest_, other.idx_oldest_);
+        std::swap(idx_to_poll_, other.idx_to_poll_);
+        return *this;
+    }
+
+    /**
+     *  @brief  Allocates memory for the specified number of elements in the round-robin buffer.
+     *  @param  n Number of elements to allocate.
+     *  @return True if allocation is successful, otherwise false.
      */
-    asm volatile("mrs %0, cntvct_el0" : "=r"(result));
-#else
-    result = __rdtsc();
-#endif
-    return result;
-}
+    inline bool alloc(std::size_t n) noexcept {
+        auto cons = (element_at*)std::malloc(sizeof(element_at) * n);
+        if (!cons)
+            return false;
+        circle_ = cons;
+        capacity_ = n;
+        return true;
+    }
 
-std::size_t string_length(char const* c_str, std::size_t optional_length) noexcept {
-    return c_str && !optional_length ? std::strlen(c_str) : optional_length;
-}
+    /**
+     *  @brief  Drops the oldest element from the round-robin buffer.
+     *  @return The descriptor of the dropped element.
+     */
+    inline descriptor_t drop_tail() noexcept {
+        descriptor_t old = std::exchange(circle_[idx_oldest_].descriptor, bad_descriptor_k);
+        idx_to_poll_ = idx_to_poll_ == idx_oldest_ ? (idx_to_poll_ + 1) % capacity_ : idx_to_poll_;
+        idx_oldest_ = (idx_oldest_ + 1) % capacity_;
+        count_--;
+        return old;
+    }
+
+    /**
+     *  @brief  Adds a new element to the round-robin buffer.
+     *  @param  new_ The new element to add.
+     */
+    inline void push_ahead(descriptor_t new_) noexcept {
+        circle_[idx_newest_].descriptor = new_;
+        circle_[idx_newest_].skipped_cycles = 0;
+        circle_[idx_newest_].response.copies_count = 0;
+        circle_[idx_newest_].response.iovecs_count = 0;
+        idx_newest_ = (idx_newest_ + 1) % capacity_;
+        count_++;
+    }
+
+    /**
+     *  @brief  Polls the next element in the round-robin buffer.
+     *  @return Reference to the polled element.
+     */
+    inline element_at& poll() noexcept {
+        auto connection_ptr = &circle_[idx_to_poll_];
+        auto idx_to_poll_following = (idx_to_poll_ + 1) % count_;
+        idx_to_poll_ = idx_to_poll_following == idx_newest_ ? idx_oldest_ : idx_to_poll_following;
+        return circle_[idx_to_poll_];
+    }
+
+    /**
+     *  @brief  Gets the oldest element in the round-robin buffer.
+     *  @return Reference to the oldest element.
+     */
+    inline element_at& tail() noexcept { return circle_[idx_oldest_]; }
+
+    /**
+     *  @brief  Gets the newest element in the round-robin buffer.
+     *  @return Reference to the newest element.
+     */
+    inline element_at& head() noexcept { return circle_[idx_newest_ - 1]; }
+
+    /**
+     *  @brief  Gets the number of elements in the round-robin buffer.
+     *  @return Number of elements.
+     */
+    inline std::size_t size() const noexcept { return count_; }
+
+    /**
+     *  @brief  Gets the capacity of the round-robin buffer.
+     *  @return Capacity of the buffer.
+     */
+    inline std::size_t capacity() const noexcept { return capacity_; }
+};
 
 } // namespace unum::ucall
